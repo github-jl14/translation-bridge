@@ -27,12 +27,8 @@ jobs:
       - name: Install Dependencies
         run: |
           pip install requests-html langdetect
-          sudo apt-get update
 
       - name: Run Translation Script
-        env:
-          DISPLAY: ":99"
         run: |
-          Xvfb :99 -screen 0 1024x768x24 &
-          echo "Running translate.py..."
+          echo "Running debugVersion.py..."
           python debugVersion.py || (echo "debugVersion.py failed!" && exit 1)
