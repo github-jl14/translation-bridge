@@ -42,66 +42,138 @@ time.sleep(3)
 
 # Modify local storage to set the target language
 print(f"{BLUE}[INFO]{RESET} Setting target language to {TARGET_LANGUAGE}...")
-driver.execute_script(f'localStorage.setItem("LMT_selectedTargetLanguage", "{TARGET_LANGUAGE}");')
-time.sleep(1)
+import time
+import json
+import os
+import sys
+from langdetect import detect
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.devtools import devtools
+
+# DeepL URL
+DEEPL_URL = "https://www.deepl.com/en/translate"
+
+# ANSI Color Dictionary
+COLOR = {
+    "RESET": "\033[0m",
+    "BOLD": "\033[1m",
+    "INFO": "\033[34m",    # Blue
+    "SUCCESS": "\033[32m", # Green
+    "WARNING": "\033[33m", # Yellow
+    "ERROR": "\033[31m",   # Red
+}
+
+# List of supported languages (from DeepL's API structure)
+PREFERRED_LANGUAGES = {
+    "EN", "DE", "ZH", "JA", "ES", "FR", "RU", "IT", "PT", "PL", "ID", "NL",
+    "TR", "UK", "KO", "CS", "HU", "AR", "RO", "SV", "SK", "FI", "DA", "EL",
+    "LT", "BG", "NB", "SL", "ET", "LV"
+}
 
 # Read LRC file
-lrc_filename = "sample.lrc"
-try:
-    with open(lrc_filename, "r", encoding="utf-8") as file:
-        input_text = file.read().strip()
-        print(f"{GREEN}[SUCCESS]{RESET} Read input file '{lrc_filename}' successfully.")
-except Exception as e:
-    print(f"{RED}[ERROR]{RESET} Failed to read '{lrc_filename}': {e}")
-    driver.quit()
+LRC_FILE = "sample.lrc"
+if not os.path.exists(LRC_FILE):
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} LRC file not found!")
     sys.exit(1)
+
+with open(LRC_FILE, "r", encoding="utf-8") as file:
+    source_text = file.read().strip()
+
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Loaded LRC file with {len(source_text.splitlines())} lines.")
+
+# Detect language from the LRC file
+detected_source = detect(source_text).upper()
+TARGET_LANGUAGE = "EN"  # Default translation target
+
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Detected Language: {detected_source}")
+
+if detected_source not in PREFERRED_LANGUAGES:
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Unsupported language detected!")
+    sys.exit(1)
+
+# Selenium Setup with DevTools
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})  # Enable performance logs
+
+service = Service("/usr/bin/chromedriver")
+driver = webdriver.Chrome(service=service, options=chrome_options)
+
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Opening DeepL website...")
+driver.get(DEEPL_URL)
+time.sleep(3)
+
+# Modify local storage to set the target language
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Setting target language to {TARGET_LANGUAGE}...")
+driver.execute_script(f'localStorage.setItem("LMT_selectedTargetLanguage", "{TARGET_LANGUAGE}");')
+time.sleep(1)
 
 # Find input box
 try:
     input_box = driver.find_element(By.CSS_SELECTOR, 'div[contenteditable="true"]')
-    print(f"{GREEN}[SUCCESS]{RESET} Found input box.")
+    print(f"{COLOR['SUCCESS']}[SUCCESS]{COLOR['RESET']} Found input box.")
 except Exception as e:
-    print(f"{RED}[ERROR]{RESET} Could not find input box: {e}")
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Could not find input box: {e}")
     driver.quit()
     sys.exit(2)
 
 # Paste text
-print(f"{BLUE}[INFO]{RESET} Pasting text into DeepL...")
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Pasting text into DeepL...")
 input_box.click()
 input_box.send_keys(Keys.CONTROL + "a")
 input_box.send_keys(Keys.BACKSPACE)
-input_box.send_keys(input_text)
-time.sleep(5)
+input_box.send_keys(source_text)
+time.sleep(10)  # Wait for translation to process
 
-# Get the page source and parse with BeautifulSoup
-print(f"{BLUE}[INFO]{RESET} Parsing page source...")
-soup = BeautifulSoup(driver.page_source, "html.parser")
+# Capture network logs
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Capturing network logs for translation requests...")
 
-# Detect source language
-detected_lang_tag = soup.select_one('[data-testid="translator-source-lang"]')
-detected_lang = detected_lang_tag.get_text(strip=True) if detected_lang_tag else "unknown"
-print(f"{YELLOW}[DEBUG]{RESET} Detected source language: {detected_lang}")
+logs = driver.get_log("performance")
+last_handle_jobs_request = None
 
-# Map DeepL's displayed language names to standard codes
-DEEPL_LANG_MAP = {
-    "English": "EN", "Filipino": "TL", "Tagalog": "TL", "French": "FR",
-    "Spanish": "ES", "German": "DE", "Japanese": "JA", "Chinese": "ZH",
-}
-detected_lang_code = DEEPL_LANG_MAP.get(detected_lang, detected_lang)
+for log in reversed(logs):
+    log_entry = json.loads(log["message"])["message"]
+    if log_entry["method"] == "Network.requestWillBeSent":
+        request_url = log_entry["params"]["request"]["url"]
+        if "jsonrpc?method=LMT_handle_jobs" in request_url:
+            last_handle_jobs_request = json.loads(log_entry["params"]["request"]["postData"])
+            break
 
-# Check if the detected language is supported
-if detected_lang_code not in PREFERRED_LANGUAGES:
-    print(f"{RED}[ERROR]{RESET} Language '{detected_lang_code}' is unsupported!")
+if not last_handle_jobs_request:
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Could not find the 'LMT_handle_jobs' request.")
     driver.quit()
     sys.exit(3)
 
-# Extract translated text using BeautifulSoup
-translated_div = soup.select_one('div[contenteditable="false"][role="textbox"]')
-if translated_div:
-    translated_text = "\n".join([p.get_text() for p in translated_div.find_all("p")])
-    print(f"\n{GREEN}[SUCCESS]{RESET} Translated Text:\n{BOLD}{translated_text}{RESET}")
+# Extract translated text from the captured request
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Parsing translation response...")
+
+if "params" in last_handle_jobs_request and "jobs" in last_handle_jobs_request["params"]:
+    translated_texts = [
+        job["sentences"][0]["text"]
+        for job in last_handle_jobs_request["params"]["jobs"]
+        if "sentences" in job and len(job["sentences"]) > 0
+    ]
+
+    if translated_texts:
+        print(f"\n{COLOR['SUCCESS']}[SUCCESS]{COLOR['RESET']} Final Translated Text:\n")
+        for line in translated_texts:
+            print(line)
+    else:
+        print(f"{COLOR['WARNING']}[WARNING]{COLOR['RESET']} No translated text found!")
+
 else:
-    print(f"{RED}[ERROR]{RESET} Output div not found.")
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Invalid response format!")
+
+# Cleanup
+driver.quit()
+sys.exit(0)
+not found.")
     driver.quit()
     sys.exit(4)
 
