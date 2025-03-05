@@ -57,6 +57,65 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
+import time
+import json
+import os
+import sys
+from langdetect import detect
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+
+# DeepL URL
+DEEPL_URL = "https://www.deepl.com/en/translate"
+
+# ANSI Color Dictionary
+COLOR = {
+    "RESET": "\033[0m",
+    "BOLD": "\033[1m",
+    "INFO": "\033[34m",    # Blue
+    "SUCCESS": "\033[32m", # Green
+    "WARNING": "\033[33m", # Yellow
+    "ERROR": "\033[31m",   # Red
+}
+
+# Supported languages
+PREFERRED_LANGUAGES = {
+    "EN", "DE", "ZH", "JA", "ES", "FR", "RU", "IT", "PT", "PL", "ID", "NL",
+    "TR", "UK", "KO", "CS", "HU", "AR", "RO", "SV", "SK", "FI", "DA", "EL",
+    "LT", "BG", "NB", "SL", "ET", "LV"
+}
+
+# Read LRC file
+LRC_FILE = "sample.lrc"
+if not os.path.exists(LRC_FILE):
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} LRC file not found!")
+    sys.exit(1)
+
+with open(LRC_FILE, "r", encoding="utf-8") as file:
+    source_text = file.read().strip()
+
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Loaded LRC file with {len(source_text.splitlines())} lines.")
+
+# Detect language
+detected_source = detect(source_text).upper()
+TARGET_LANGUAGE = "EN"
+
+print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Detected Language: {detected_source}")
+
+if detected_source not in PREFERRED_LANGUAGES:
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Unsupported language detected!")
+    sys.exit(1)
+
+# Selenium Setup
+chrome_options = Options()
+chrome_options.add_argument("--headless")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
+
 service = Service("/usr/bin/chromedriver")
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
@@ -92,7 +151,13 @@ time.sleep(10)  # Wait for translation to process
 # Capture network logs
 print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Capturing network logs for translation requests...")
 
-logs = driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": "1"})
+try:
+    logs = driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": "1"})
+except selenium.common.exceptions.WebDriverException as e:
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} An error occurred: {e}")
+    driver.quit()
+    sys.exit(3)
+
 last_handle_jobs_request = None
 
 for log in logs:
@@ -121,6 +186,14 @@ if "params" in last_handle_jobs_request and "jobs" in last_handle_jobs_request["
             print(line)
     else:
         print(f"{COLOR['WARNING']}[WARNING]{COLOR['RESET']} No translated text found!")
+
+else:
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Invalid response format!")
+
+# Cleanup
+driver.quit()
+sys.exit(0)
+ranslated text found!")
 
 else:
     print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Invalid response format!")
