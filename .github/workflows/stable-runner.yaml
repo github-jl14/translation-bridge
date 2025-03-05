@@ -26,7 +26,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install requests-html langdetect beautifulsoup4 lxml[html-clean]
+          pip install requests-html langdetect beautifulsoup4 lxml[html_clean]
 
       - name: Run Translation Script
         run: |
