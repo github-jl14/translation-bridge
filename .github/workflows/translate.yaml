@@ -3,12 +3,12 @@ name: DeepL Translation
 on:
   push:
     branches:
-      - main  # Runs on push to main
-  workflow_dispatch:  # Allows manual trigger
+      - main
+  workflow_dispatch:
 
 jobs:
   translate:
-    runs-on: ubuntu-latest  # Uses latest Ubuntu runner
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
@@ -22,8 +22,8 @@ jobs:
       - name: Cache Python Dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip  # Cache pip packages
-          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}  # Unique key based on dependencies
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             pip-${{ runner.os }}-
 
@@ -31,13 +31,13 @@ jobs:
         run: |
           pip install selenium mitmproxy requests
           sudo apt-get update
-          sudo apt-get install -y xvfb chromium-chromedriver
-          echo "CHROME_BIN=$(which chromium-browser)" >> $GITHUB_ENV
-          echo "CHROMEDRIVER_BIN=$(which chromedriver)" >> $GITHUB_ENV
+          sudo apt-get install -y xvfb chromium-browser chromium-chromedriver
+          echo "CHROME_BIN=/usr/bin/chromium-browser" >> $GITHUB_ENV
+          echo "CHROMEDRIVER_BIN=/usr/bin/chromedriver" >> $GITHUB_ENV
 
       - name: Run Translation Script
         env:
-          DISPLAY: ":99"  # Needed for headless Chrome
+          DISPLAY: ":99"
         run: |
           Xvfb :99 -screen 0 1024x768x24 &  # Start virtual display
           python translate.py
