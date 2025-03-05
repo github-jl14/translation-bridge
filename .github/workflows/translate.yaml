@@ -41,4 +41,8 @@ jobs:
         run: |
           Xvfb :99 -screen 0 1024x768x24 &  # Start virtual display
           python translate.py
+          echo "\n"
+          echo "\n"
+          echo "RUNNING DEBUG VERSION"
+          echo "\n"
           python debugVersion.py
