@@ -1,4 +1,4 @@
-name: DeepL Translation
+name: DeepL Translation (Verbose, Stable)
 
 on:
   workflow_dispatch:
