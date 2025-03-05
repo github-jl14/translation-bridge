@@ -1,47 +1,3 @@
-import json
-import time
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from bs4 import BeautifulSoup
-import sys
-
-# ANSI Color Codes
-RESET = "\033[0m"
-BOLD = "\033[1m"
-GREEN = "\033[92m"
-YELLOW = "\033[93m"
-RED = "\033[91m"
-BLUE = "\033[94m"
-
-# Hardcoded preferred languages
-PREFERRED_LANGUAGES = {
-    "EN", "DE", "ZH", "JA", "ES", "FR", "RU", "IT", "PT", "PL", "ID", "NL",
-    "TR", "UK", "KO", "CS", "HU", "AR", "RO", "SV", "SK", "FI", "DA", "EL",
-    "LT", "BG", "NB", "SL", "ET", "LV"
-}
-
-# Define target language
-TARGET_LANGUAGE = "EN"  # English
-
-# Chrome options
-chrome_options = Options()
-chrome_options.binary_location = "/usr/bin/chromium-browser"
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-
-service = Service("/usr/bin/chromedriver")
-driver = webdriver.Chrome(service=service, options=chrome_options)
-
-print(f"{BLUE}[INFO]{RESET} Opening DeepL website...")
-driver.get("https://www.deepl.com/en/translate")
-time.sleep(3)
-
-# Modify local storage to set the target language
-print(f"{BLUE}[INFO]{RESET} Setting target language to {TARGET_LANGUAGE}...")
 import time
 import json
 import os
@@ -171,18 +127,5 @@ else:
     print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Invalid response format!")
 
 # Cleanup
-driver.quit()
-sys.exit(0)
-not found.")
-    driver.quit()
-    sys.exit(4)
-
-# Save the raw page source for debugging
-with open("debug_page.html", "w", encoding="utf-8") as debug_file:
-    debug_file.write(driver.page_source)
-    print(f"{YELLOW}[DEBUG]{RESET} Saved page source to 'debug_page.html' for inspection.")
-
-# Close browser
-print(f"{BLUE}[INFO]{RESET} Closing browser...")
 driver.quit()
 sys.exit(0)
