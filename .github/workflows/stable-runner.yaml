@@ -27,8 +27,11 @@ jobs:
       - name: Cache APT Dependencies
         uses: actions/cache@v3
         with:
-          path: /var/cache/apt
-          key: apt-${{ runner.os }}-chromium
+          path: |
+            /var/cache/apt
+            /usr/bin/chromium-browser
+            /usr/bin/chromedriver
+          key: apt-${{ runner.os }}-chromium-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             apt-${{ runner.os }}-
 
