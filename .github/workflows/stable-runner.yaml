@@ -24,29 +24,11 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-
 
-      - name: Cache APT Dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            /var/cache/apt
-            /usr/bin/chromium-browser
-            /usr/bin/chromedriver
-          key: apt-${{ runner.os }}-chromium-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            apt-${{ runner.os }}-
-
       - name: Install Dependencies
         run: |
-          pip install selenium langdetect
-          sudo apt-get update
-          sudo apt-get install -y xvfb chromium-browser chromium-chromedriver
-          echo "CHROME_BIN=/usr/bin/chromium-browser" >> $GITHUB_ENV
-          echo "CHROMEDRIVER_BIN=/usr/bin/chromedriver" >> $GITHUB_ENV
+          pip install requests-html langdetect
 
       - name: Run Translation Script
-        env:
-          DISPLAY: ":99"
         run: |
-          Xvfb :99 -screen 0 1024x768x24 &
-          echo "Running translate.py..."
+          echo "Running debugVersion.py..."
           python debugVersion.py || (echo "debugVersion.py failed!" && exit 1)
