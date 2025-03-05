@@ -27,6 +27,14 @@ jobs:
           restore-keys: |
             pip-${{ runner.os }}-
 
+      - name: Cache APT Dependencies
+        uses: actions/cache@v3
+        with:
+          path: /var/cache/apt
+          key: apt-${{ runner.os }}-chromium
+          restore-keys: |
+            apt-${{ runner.os }}-
+
       - name: Install Dependencies
         run: |
           pip install selenium mitmproxy requests beautifulsoup4 lxml
@@ -39,10 +47,14 @@ jobs:
         env:
           DISPLAY: ":99"
         run: |
-          Xvfb :99 -screen 0 1024x768x24 &  # Start virtual display
-          python translate.py
-          echo "\n"
-          echo "\n"
+          Xvfb :99 -screen 0 1024x768x24 &
+          echo "Running translate.py..."
+          python translate.py || (echo "translate.py failed!" && exit 1)
+          
+          echo ""
+          echo "---------------------------"
           echo "RUNNING DEBUG VERSION"
-          echo "\n"
-          python debugVersion.py
+          echo "---------------------------"
+          echo ""
+
+          python debugVersion.py || (echo "debugVersion.py failed!" && exit 1)
