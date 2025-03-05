@@ -3,6 +3,7 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
 # Hardcoded preferred languages
@@ -15,10 +16,15 @@ PREFERRED_LANGUAGES = {
 # Define target language (change as needed)
 TARGET_LANGUAGE = "EN"  # English
 
-# Setup Selenium with headless mode
-options = Options()
-options.add_argument("--headless")  # Runs without opening a browser window
-driver = webdriver.Chrome(options=options)
+chrome_options = Options()
+chrome_options.binary_location = "/usr/bin/chromium-browser"  # Use Chromium instead of Chrome
+chrome_options.add_argument("--headless")  # Run without UI
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+
+service = Service("/usr/bin/chromedriver")  # Point to the correct ChromeDriver
+driver = webdriver.Chrome(service=service, options=chrome_options)
+
 
 # Open DeepL
 driver.get("https://www.deepl.com/en/translate")
