@@ -50,11 +50,3 @@ jobs:
           Xvfb :99 -screen 0 1024x768x24 &
           echo "Running translate.py..."
           python translate.py || (echo "translate.py failed!" && exit 1)
-          
-          echo ""
-          echo "---------------------------"
-          echo "RUNNING DEBUG VERSION"
-          echo "---------------------------"
-          echo ""
-
-          python debugVersion.py || (echo "debugVersion.py failed!" && exit 1)
