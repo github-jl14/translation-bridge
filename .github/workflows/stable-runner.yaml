@@ -34,7 +34,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install selenium langdetector
+          pip install selenium langdetect
           sudo apt-get update
           sudo apt-get install -y xvfb chromium-browser chromium-chromedriver
           echo "CHROME_BIN=/usr/bin/chromium-browser" >> $GITHUB_ENV
