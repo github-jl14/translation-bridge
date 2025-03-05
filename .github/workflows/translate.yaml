@@ -1,0 +1,35 @@
+name: DeepL Translation
+
+on:
+  push:
+    branches:
+      - main  # Runs when pushing to main branch
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest  # Uses the latest Ubuntu runner
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          pip install selenium mitmproxy requests
+          sudo apt-get update
+          sudo apt-get install -y xvfb chromium-chromedriver
+          echo "CHROME_BIN=$(which chromium-browser)" >> $GITHUB_ENV
+          echo "CHROMEDRIVER_BIN=$(which chromedriver)" >> $GITHUB_ENV
+
+      - name: Run Translation Script
+        env:
+          DISPLAY: ":99"  # Needed for headless Chrome
+        run: |
+          Xvfb :99 -screen 0 1024x768x24 &  # Start virtual display
+          python translate.py
