@@ -8,7 +8,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.devtools import devtools
 
 # DeepL URL
 DEEPL_URL = "https://www.deepl.com/en/translate"
@@ -23,7 +22,7 @@ COLOR = {
     "ERROR": "\033[31m",   # Red
 }
 
-# List of supported languages (from DeepL's API structure)
+# Supported languages
 PREFERRED_LANGUAGES = {
     "EN", "DE", "ZH", "JA", "ES", "FR", "RU", "IT", "PT", "PL", "ID", "NL",
     "TR", "UK", "KO", "CS", "HU", "AR", "RO", "SV", "SK", "FI", "DA", "EL",
@@ -41,9 +40,9 @@ with open(LRC_FILE, "r", encoding="utf-8") as file:
 
 print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Loaded LRC file with {len(source_text.splitlines())} lines.")
 
-# Detect language from the LRC file
+# Detect language
 detected_source = detect(source_text).upper()
-TARGET_LANGUAGE = "EN"  # Default translation target
+TARGET_LANGUAGE = "EN"
 
 print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Detected Language: {detected_source}")
 
@@ -51,12 +50,12 @@ if detected_source not in PREFERRED_LANGUAGES:
     print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Unsupported language detected!")
     sys.exit(1)
 
-# Selenium Setup with DevTools
+# Selenium Setup
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})  # Enable performance logs
+chrome_options.add_experimental_option("excludeSwitches", ["enable-logging"])
 
 service = Service("/usr/bin/chromedriver")
 driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -65,7 +64,10 @@ print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Opening DeepL website...")
 driver.get(DEEPL_URL)
 time.sleep(3)
 
-# Modify local storage to set the target language
+# Enable DevTools Network Monitoring
+driver.execute_cdp_cmd("Network.enable", {})
+
+# Modify local storage
 print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Setting target language to {TARGET_LANGUAGE}...")
 driver.execute_script(f'localStorage.setItem("LMT_selectedTargetLanguage", "{TARGET_LANGUAGE}");')
 time.sleep(1)
@@ -90,23 +92,20 @@ time.sleep(10)  # Wait for translation to process
 # Capture network logs
 print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Capturing network logs for translation requests...")
 
-logs = driver.get_log("performance")
+logs = driver.execute_cdp_cmd("Network.getResponseBody", {"requestId": "1"})
 last_handle_jobs_request = None
 
-for log in reversed(logs):
-    log_entry = json.loads(log["message"])["message"]
-    if log_entry["method"] == "Network.requestWillBeSent":
-        request_url = log_entry["params"]["request"]["url"]
-        if "jsonrpc?method=LMT_handle_jobs" in request_url:
-            last_handle_jobs_request = json.loads(log_entry["params"]["request"]["postData"])
-            break
+for log in logs:
+    if "jsonrpc?method=LMT_handle_jobs" in log["url"]:
+        last_handle_jobs_request = json.loads(log["body"])
+        break
 
 if not last_handle_jobs_request:
-    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Could not find the 'LMT_handle_jobs' request.")
+    print(f"{COLOR['ERROR']}[ERROR]{COLOR['RESET']} Could not find 'LMT_handle_jobs' request.")
     driver.quit()
     sys.exit(3)
 
-# Extract translated text from the captured request
+# Extract translated text
 print(f"{COLOR['INFO']}[INFO]{COLOR['RESET']} Parsing translation response...")
 
 if "params" in last_handle_jobs_request and "jobs" in last_handle_jobs_request["params"]:
