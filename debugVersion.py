@@ -42,10 +42,12 @@ if target_textarea:
                 result.append(part)
         processed_lines.append(''.join(result))
 
-    final_translated_text = '\n'.join(processed_lines)
+    content = '\n'.join(processed_lines)
+    fix = content.replace('[', "\n[")
+    final_contents = fix.replace('\n[', '[', 1)
 
     with open("result.lrc", "w", encoding="utf-8") as result_file:
-        result_file.write(final_translated_text)
+        result_file.write(final_contents)
     print("Translation and duplicate removal complete. Results saved to result.lrc")
 else:
     print("Translation not found.")
